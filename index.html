@@ -1,595 +1,89 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#1B6B45"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style></head><body><meta name="claude:viewport-fit-sides" content="cover">
-<title>Pin High</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10271f"><title>Pin-High Pro | Golf GPS</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root {
-  /* Layout: one yardage-book page per hole. Big condensed numerals on turf-tinted paper,
-     everything within thumb reach, three tabs at the bottom (Hole, Card, Round). */
-  --bg: #ECEFE6;
-  --surface: #FBFCF8;
-  --ink: #10231A;
-  --muted: #566559;
-  --line: #D2D9C9;
-  --tint: #DCE6D4;
-  --accent: #1B6B45;
-  --accent-ink: #F4FAF6;
-  --pin: #C13A22;
-  --f-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
-  --f-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0B1410; --surface: #122019; --ink: #E6EEE8; --muted: #8FA196; --line: #233429;
-    --tint: #1A2D22; --accent: #5ACB8B; --accent-ink: #06130C; --pin: #FF7C5E;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0B1410; --surface: #122019; --ink: #E6EEE8; --muted: #8FA196; --line: #233429;
-  --tint: #1A2D22; --accent: #5ACB8B; --accent-ink: #06130C; --pin: #FF7C5E;
-  color-scheme: dark;
-}
-
-*, *::before, *::after { box-sizing: border-box; }
-[hidden] { display: none !important; }
-html, body { height: 100%; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 16px/1.4 var(--f-body);
-  font-variant-numeric: tabular-nums;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  -webkit-text-size-adjust: 100%;
-}
-button, input, select { font: inherit; color: inherit; }
-button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button:disabled { cursor: default; }
-:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-
-.app { display: flex; flex-direction: column; height: 100%; max-width: 520px; margin: 0 auto; position: relative; }
-.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 10px 6px; }
-.top .meta { min-width: 0; }
-.top .course { font: 600 13px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.top .date { font: 500 13px var(--f-body); color: var(--muted); }
-.pill { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; font: 600 13px var(--f-body); padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
-.pill .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
-.pill.live .dot { background: var(--accent); }
-.pill.blocked .dot, .pill.unsupported .dot { background: var(--pin); }
-.pill.searching .dot { animation: pulse 1.2s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: .25; } }
-@media (prefers-reduced-motion: reduce) { .pill.searching .dot { animation: none; } }
-
-main { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-block: 6px 16px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; min-width: 0; }
-.lbl { font: 600 12px var(--f-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.small { font: 500 14px/1.35 var(--f-body); color: var(--muted); margin: 0; }
-h2 { font: 700 22px/1.1 var(--f-display); letter-spacing: .02em; text-transform: uppercase; margin: 0 0 10px; }
-
-.btn { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 16px var(--f-body); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn.small { min-height: 44px; padding: 0 14px; font-size: 15px; }
-.btn.marked { background: var(--tint); border-color: var(--accent); color: var(--accent); }
-.btn.danger { border-color: var(--pin); color: var(--pin); }
-.btn.ghost { background: transparent; }
-
-/* hole header */
-.holehead { display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 8px; }
-.nav { height: 56px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font: 600 30px/1 var(--f-display); }
-.holeid { display: flex; flex-direction: column; align-items: center; line-height: 1; }
-.holeid .num { font: 700 68px/.92 var(--f-display); }
-.holeid .meta { font: 500 15px var(--f-body); color: var(--muted); margin-top: 4px; }
-.strip { display: flex; gap: 6px; overflow-x: auto; padding-block: 2px; scrollbar-width: none; }
-.strip::-webkit-scrollbar { display: none; }
-.chip { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font: 600 17px var(--f-display); }
-.chip.done { background: var(--tint); }
-.chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-
-/* GPS distances */
-.dists { display: grid; grid-template-columns: 1fr 1.6fr 1fr; align-items: end; gap: 8px; text-align: center; }
-.d { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
-.d .v { font: 700 46px/.95 var(--f-display); }
-.d.main .v { font-size: 88px; color: var(--accent); }
-.d .u { font: 600 13px var(--f-body); color: var(--muted); letter-spacing: .08em; }
-.gstat { margin: 12px 0 0; text-align: center; font: 500 14px/1.35 var(--f-body); color: var(--muted); min-height: 1.4em; }
-.gretry { margin-top: 10px; width: 100%; }
-.markrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
-.markrow .lbl { flex: 1 0 100%; }
-.markrow .btn { flex: 1 1 0; }
-
-/* shot tracker */
-.shotrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.shotrow .sv { font: 700 44px/1 var(--f-display); margin: 2px 0 4px; }
-.shotrow .sv .u { font: 600 13px var(--f-body); color: var(--muted); margin-left: 4px; letter-spacing: .08em; }
-.shotrow .col { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
-
-/* score entry */
-.score { display: flex; flex-direction: column; gap: 10px; }
-.step { display: grid; grid-template-columns: 64px 60px 1fr 60px; align-items: center; gap: 10px; }
-.stepbtn { height: 60px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); font: 600 32px/1 var(--f-display); }
-.stepbtn:active { background: var(--tint); }
-.val { display: flex; align-items: center; justify-content: center; font: 700 54px/1 var(--f-display); min-height: 64px; }
-.rel { margin: 0; text-align: center; font: 600 15px var(--f-body); color: var(--muted); }
-
-/* scorecard marks: circle birdie, double circle eagle, square bogey, double square double+ */
-.mk { display: inline-flex; align-items: center; justify-content: center; min-width: 1.45em; height: 1.45em; padding: 0 .1em; margin: 6px; }
-.m-birdie, .m-eagle { border: 2px solid currentColor; border-radius: 50%; }
-.m-eagle { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px currentColor; }
-.m-bogey, .m-double { border: 2px solid currentColor; border-radius: 3px; }
-.m-double { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px currentColor; }
-
-/* card tab */
-.summary { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; gap: 6px; }
-.summary .n { font: 700 40px/1 var(--f-display); margin-top: 4px; }
-.scroll { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font: 500 16px var(--f-body); }
-th { font: 600 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: center; padding: 8px 4px; }
-td { text-align: center; padding: 2px 4px; height: 46px; border-top: 1px solid var(--line); }
-td.hn { width: 52px; }
-.linkbtn { width: 40px; height: 36px; border-radius: 8px; border: 0; background: transparent; font: 700 20px var(--f-display); }
-tr.cur td { background: var(--tint); }
-tr.sub td { font-weight: 600; background: var(--bg); }
-td.sc { font: 700 22px var(--f-display); }
-
-/* round tab */
-.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-input, select { width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 0 12px; font-size: 16px; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; }
-.row .btn { flex: 1 1 140px; }
-.hrow { display: grid; grid-template-columns: 30px 70px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding-block: 6px; border-top: 1px solid var(--line); }
-.hrow .hn { font: 700 20px var(--f-display); text-align: center; }
-.hrow select, .hrow input { min-height: 44px; padding: 0 8px; }
-.marks { display: flex; gap: 4px; }
-.mchip { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); font: 700 14px var(--f-display); }
-.mchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.hist { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding-block: 10px; border-top: 1px solid var(--line); }
-.hist .t { font: 600 16px var(--f-body); }
-.hist .s { font: 700 28px/1 var(--f-display); text-align: right; }
-.hist .r { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-block: 8px 8px; border-top: 1px solid var(--line); }
-.tabs button { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); font: 600 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; }
-.tabs button[aria-current="page"] { color: var(--accent); background: var(--tint); }
-
-.toast { position: absolute; left: 0; right: 0; bottom: 78px; margin-inline: auto; width: max-content; max-width: calc(100% - 16px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font: 600 14px var(--f-body); text-align: center; z-index: 5; }
-</style>
-
-<div class="app" id="app">
-  <header class="top" id="top"></header>
-  <main id="view"></main>
-  <nav class="tabs" id="tabs" aria-label="Sections"></nav>
-  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+:root{--bg:#0c1512;--panel:#14231d;--panel2:#1b3027;--text:#f2f6f2;--muted:#a9b8ae;--green:#75d6a0;--gold:#e8c879;--line:#30473b;--red:#ff9b91}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit}button{border:0;border-radius:12px;background:var(--green);color:#092015;font-weight:700;padding:11px 14px;cursor:pointer}button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}button.warn{background:#482622;color:#ffd9d5}header{padding:18px 16px 14px;background:#10271f;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:500}header .brand{font-size:22px;font-weight:850;letter-spacing:.2px}header small{color:var(--muted)}.wrap{max-width:900px;margin:auto;padding:14px}.tabs{display:flex;gap:7px;overflow:auto;padding:8px 0 12px}.tabs button{white-space:nowrap}.tabs button.active{background:var(--green)}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:13px}.card h2{font-size:17px;margin:0 0 10px}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:12px;color:var(--muted)}input,select{width:100%;min-width:0;background:#0c1712;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px}input[type=checkbox]{width:auto}.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.row>*{flex:1}.stat{background:var(--panel2);border-radius:12px;padding:10px}.stat b{display:block;font-size:20px;color:var(--green)}#map{height:370px;border-radius:13px;border:1px solid var(--line);z-index:1}.small{font-size:12px}.pill{display:inline-block;background:#294438;border-radius:99px;padding:4px 9px;color:#c5f5d7;font-size:12px}.hole-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.hole-nav strong{font-size:19px}.list{display:flex;flex-direction:column;gap:8px}.shot{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.shot b{color:var(--green)}.hidden{display:none!important}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border-bottom:1px solid var(--line);padding:8px;text-align:center}th{color:var(--muted)}.notice{background:#302a18;border:1px solid #675a30;color:#f7e5ae;padding:10px;border-radius:12px;font-size:12px}.footer{color:var(--muted);font-size:11px;text-align:center;padding:20px}
+@media(min-width:700px){.two{display:grid;grid-template-columns:1.25fr .75fr;gap:13px}.two .card{margin-bottom:0}.wrap{padding:20px}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style></head>
+<body>
+<header><div class="brand">⛳ PIN-HIGH <span style="color:var(--green)">PRO</span></div><small>Golf GPS · Shot tracking · Smarter decisions</small></header>
+<main class="wrap">
+<div class="notice">Prototype note: GPS requires location permission and HTTPS. Course map starts near Odessa National; individual tee, green and hazard coordinates are not yet verified. Tap the map to mark shot locations. Satellite tiles require an internet connection.</div>
+<div class="tabs" id="tabs"><button class="active" data-tab="play">GPS Round</button><button class="secondary" data-tab="clubs">My 14 Clubs</button><button class="secondary" data-tab="score">Scorecard</button><button class="secondary" data-tab="stats">Performance</button></div>
+<section id="play">
+<div class="card">
+<div class="hole-nav"><button class="secondary" id="prev">← Hole</button><div><strong id="holeTitle">Hole 1</strong><div class="muted small" id="holeMeta">Par 4 · Select tee</div></div><button class="secondary" id="next">Hole →</button></div>
+<div class="grid four">
+<div class="stat"><span class="small muted">To green center</span><b id="centerDist">—</b><span class="small">yards</span></div>
+<div class="stat"><span class="small muted">Front / Back</span><b id="fbDist">— / —</b><span class="small">yards</span></div>
+<div class="stat"><span class="small muted">Your GPS</span><b id="gpsStatus">Off</b><span class="small" id="gpsAccuracy">Tap locate</span></div>
+<div class="stat"><span class="small muted">Score</span><b id="holeScore">—</b><span class="small">strokes</span></div>
 </div>
-
+<div class="row" style="margin:12px 0"><button id="locate">◎ Locate me</button><button class="secondary" id="sat">Satellite map</button><button class="secondary" id="road">Road map</button></div>
+<div id="map"></div>
+<p class="small muted">Tap anywhere on the map to mark a point. Use “Mark ball here” to save your current GPS position as a shot location. Green and hazard yardages become accurate once their points are mapped.</p>
+<div class="row"><button id="markBall">＋ Mark ball here</button><button class="secondary" id="markEnd">Mark shot ended here</button></div>
+</div>
+<div class="two" style="margin-top:13px">
+<div class="card"><h2>Shot recommendation</h2><div id="recommend" class="muted">Enter your club carry distances in My 14 Clubs, then set a target distance.</div>
+<div class="grid"><div class="field"><label>Target distance (yards)</label><input id="targetDist" type="number" min="1" placeholder="e.g. 148"></div><div class="field"><label>Shot type</label><select id="shotType"><option>Stock</option><option>Layup</option><option>Carry hazard</option><option>Punch out</option><option>Recovery</option></select></div></div>
+<div class="row" style="margin-top:10px"><button id="chooseClub">Recommend club</button><button class="secondary" id="recordShot">Record shot</button></div></div>
+<div class="card"><h2>Quick shot log</h2><div class="grid"><div class="field"><label>Club used</label><select id="usedClub"></select></div><div class="field"><label>Result</label><select id="shotResult"><option>Fairway</option><option>Green</option><option>Left</option><option>Right</option><option>Short</option><option>Long</option><option>Sand</option><option>Water</option><option>Penalty</option><option>Recovery</option></select></div></div><div class="field" style="margin-top:10px"><label>Notes (lie, wind, shape, etc.)</label><input id="shotNotes" placeholder="e.g. uphill lie, into wind"></div><p class="small muted" id="lastShot">No shot recorded this hole.</p></div>
+</div>
+<div class="card"><h2>Hole hazards & targets</h2><p class="muted small">Select a point type, then tap the map to place it. These points are saved on this device and used for distance calculations.</p>
+<div class="row"><div class="field"><label>Point to place</label><select id="pointType"><option value="greenFront">Green front</option><option value="greenCenter">Green center</option><option value="greenBack">Green back</option><option value="bunker">Bunker</option><option value="water">Water hazard</option><option value="layup">Layup target</option><option value="tee">Tee box</option></select></div><button class="secondary" id="armPoint">Place point on map</button></div>
+<div id="pointDistances" class="list" style="margin-top:10px"></div></div>
+</section>
+<section id="clubs" class="hidden"><div class="card"><h2>My bag · 14 clubs</h2><p class="muted small">Enter your normal carry distance, not total distance. Keep a maximum of 14 clubs. Data is stored in this browser on this device.</p><div class="table-wrap"><table><thead><tr><th>Club</th><th>Carry (yd)</th><th>Total (yd)</th></tr></thead><tbody id="clubRows"></tbody></table></div><button id="saveClubs" style="margin-top:12px">Save my bag</button></div></section>
+<section id="score" class="hidden"><div class="card"><h2>Round scorecard</h2><div class="grid"><div class="field"><label>Player / round name</label><input id="roundName" placeholder="My round"></div><div class="field"><label>Tee box</label><select id="tee"><option>White</option><option>Blue</option><option>Black</option><option>Gold</option><option>Red</option></select></div></div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Hole</th><th>Par</th><th>Score</th><th>Putts</th><th>FIR</th><th>GIR</th></tr></thead><tbody id="scoreRows"></tbody><tfoot id="scoreTotals"></tfoot></table></div><button id="saveRound" style="margin-top:12px">Save round</button><button id="export" class="secondary" style="margin-top:12px">Export data (JSON)</button></div></section>
+<section id="stats" class="hidden"><div class="card"><h2>Performance dashboard</h2><div class="grid"><div class="stat"><span class="small muted">Shots logged</span><b id="statShots">0</b></div><div class="stat"><span class="small muted">Avg. recorded shot</span><b id="statAvg">—</b></div><div class="stat"><span class="small muted">Fairways hit</span><b id="statFir">—</b></div><div class="stat"><span class="small muted">Greens in regulation</span><b id="statGir">—</b></div></div><h2 style="margin-top:16px">Club distance results</h2><div id="clubStats" class="list"></div><h2 style="margin-top:16px">Recent shots</h2><div id="allShots" class="list"></div><button class="warn" id="clearData" style="margin-top:12px">Clear saved app data</button></div></section>
+<div class="footer">Pin-High Pro · Prototype · Verify course points before relying on on-course yardages.</div>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-(function () {
-  'use strict';
-  const KEY = 'pinhigh.v1';
-  const PARS = [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 5, 4, 4, 3, 4, 5];
-  const YD = 1.0936133;
-
-  const $ = (s, r) => (r || document).querySelector(s);
-  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const uid = () => Math.random().toString(36).slice(2, 9);
-  const pad = n => String(n).padStart(2, '0');
-  const today = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
-  const fmtDate = iso => { const p = String(iso).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
-  const fmtRel = n => n === 0 ? 'E' : (n > 0 ? '+' : '−') + Math.abs(n);
-
-  /* ---------- data ---------- */
-  function mkCourse(name) {
-    return { id: uid(), name: name, holes: PARS.map(p => ({ par: p, yds: null, f: null, c: null, b: null })) };
-  }
-  function mkRound(cid) {
-    return { id: uid(), cid: cid, date: today(), hole: 0, s: Array(18).fill(null), p: Array(18).fill(null) };
-  }
-  function fresh() {
-    const c = mkCourse('My Course');
-    return { v: 1, updatedAt: 0, courses: [c], round: mkRound(c.id), history: [] };
-  }
-  function valid(s) {
-    return !!(s && Array.isArray(s.courses) && s.courses.length && s.round && Array.isArray(s.round.s) && s.round.s.length === 18 &&
-      Array.isArray(s.round.p) && s.round.p.length === 18 && Array.isArray(s.history) &&
-      s.courses.every(c => c && Array.isArray(c.holes) && c.holes.length === 18));
-  }
-  function loadLocal() {
-    try { const t = localStorage.getItem(KEY); if (!t) return null; const s = JSON.parse(t); return valid(s) ? s : null; } catch (e) { return null; }
-  }
-  let S = loadLocal() || fresh();
-  const ui = { tab: 'hole', armed: null, shot: null };
-
-  function course() { return S.courses.find(c => c.id === S.round.cid) || S.courses[0]; }
-  function fixRound() {
-    if (!S.courses.some(c => c.id === S.round.cid)) S.round.cid = S.courses[0].id;
-    S.round.hole = Math.max(0, Math.min(17, S.round.hole | 0));
-  }
-  fixRound();
-
-  /* ---------- saving: this phone first, your account when available ---------- */
-  const remote = { doc: null, state: 'local', timer: 0, busy: false, again: false };
-  function save() {
-    S.updatedAt = Date.now();
-    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
-    queueRemote();
-  }
-  function queueRemote() {
-    if (!remote.doc) return;
-    clearTimeout(remote.timer);
-    remote.timer = setTimeout(pushRemote, 1200);
-  }
-  async function pushRemote() {
-    if (!remote.doc) return;
-    if (remote.busy) { remote.again = true; return; }
-    remote.busy = true;
-    try { await remote.doc.set({ state: JSON.stringify(S), updatedAt: S.updatedAt }); remote.state = 'synced'; }
-    catch (e) { remote.state = 'error'; }
-    remote.busy = false;
-    setSync();
-    if (remote.again) { remote.again = false; queueRemote(); }
-  }
-  function setSync() {
-    const el = $('#syncNote'); if (!el) return;
-    el.textContent = !remote.doc ? 'Saved on this phone.' :
-      remote.state === 'error' ? 'Could not reach your account just now. Scores are still saved on this phone.' :
-      'Saved on this phone and backed up to your account.';
-  }
-  async function initRemote() {
-    try {
-      if (!(window.claude && window.claude.use)) return;
-      const both = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
-      const db = both[0], user = both[1];
-      if (!db || !user) return;
-      const id = await user.id();
-      if (!id) return;
-      const doc = db.doc('data/users/' + id + '/golf');
-      const snap = await doc.get();
-      remote.doc = doc; remote.state = 'synced';
-      let rs = null;
-      if (snap.exists) { try { rs = JSON.parse((snap.data() || {}).state); } catch (e) {} }
-      if (valid(rs) && (rs.updatedAt || 0) > (S.updatedAt || 0)) {
-        S = rs; fixRound();
-        try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
-        render();
-      } else if (S.updatedAt && !(valid(rs) && rs.updatedAt === S.updatedAt)) {
-        pushRemote();
-      }
-      setSync();
-    } catch (e) {}
-  }
-
-  /* ---------- GPS ---------- */
-  const gps = { pos: null, acc: null, status: 'searching', id: null };
-  function startGps() {
-    if (!('geolocation' in navigator)) { gps.status = 'unsupported'; updateLive(); return; }
-    try {
-      if (gps.id != null) navigator.geolocation.clearWatch(gps.id);
-      gps.status = gps.pos ? 'live' : 'searching';
-      gps.id = navigator.geolocation.watchPosition(onPos, onErr, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
-    } catch (e) { gps.status = 'blocked'; }
-    updateLive();
-  }
-  function onPos(p) {
-    gps.pos = { lat: p.coords.latitude, lng: p.coords.longitude };
-    gps.acc = p.coords.accuracy;
-    gps.status = 'live';
-    updateLive();
-  }
-  function onErr(e) {
-    if (e && e.code === 1) { gps.status = 'blocked'; if (gps.id != null) { try { navigator.geolocation.clearWatch(gps.id); } catch (x) {} gps.id = null; } }
-    else if (e && e.code === 2) { gps.status = gps.pos ? 'live' : 'searching'; }
-    else if (!gps.pos) { gps.status = 'searching'; }
-    updateLive();
-  }
-  function dist(a, b) {
-    const R = 6371000, t = Math.PI / 180;
-    const dLa = (b.lat - a.lat) * t, dLo = (b.lng - a.lng) * t;
-    const x = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * t) * Math.cos(b.lat * t) * Math.sin(dLo / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(x)) * YD;
-  }
-  function holeDists(i) {
-    const h = course().holes[i], o = { f: null, c: null, b: null };
-    if (!gps.pos) return o;
-    ['f', 'c', 'b'].forEach(k => { if (h[k]) o[k] = Math.round(dist(gps.pos, h[k])); });
-    return o;
-  }
-  const fmtD = v => (v == null || v > 9999) ? '–' : String(v);
-
-  function pillText() {
-    return gps.status === 'live' && gps.acc != null ? 'GPS ±' + Math.round(gps.acc * YD) + ' yd' :
-      gps.status === 'blocked' ? 'GPS off' : gps.status === 'unsupported' ? 'No GPS' : 'Finding GPS';
-  }
-  function statText(o) {
-    const h = course().holes[S.round.hole];
-    if (gps.status === 'blocked') return 'Location is blocked, so distances cannot update. Allow location for this page, then try again.';
-    if (gps.status === 'unsupported') return 'This browser cannot read your location.';
-    if (!gps.pos) return 'Looking for a GPS fix. It can take a few seconds outdoors.';
-    if (!h.f && !h.c && !h.b) return 'This green is not marked yet. Mark it once when you are standing on it and it stays saved for every round.';
-    return 'Distances update as you walk. Tee yardages come from your course setup.';
-  }
-  function updateLive() {
-    const pill = $('#gpsPill');
-    if (pill) { pill.className = 'pill ' + gps.status; $('.t', pill).textContent = pillText(); }
-    if (ui.tab !== 'hole') return;
-    const o = holeDists(S.round.hole);
-    const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
-    set('#d-f', fmtD(o.f)); set('#d-c', fmtD(o.c)); set('#d-b', fmtD(o.b));
-    set('#gstat', statText(o));
-    set('#shotd', ui.shot && gps.pos ? fmtD(Math.round(dist(ui.shot, gps.pos))) : '–');
-    const rt = $('#gpsRetry'); if (rt) rt.hidden = gps.status !== 'blocked';
-  }
-
-  /* ---------- scoring ---------- */
-  function sum(r, c, a, b) {
-    let tot = 0, par = 0, parAll = 0, putts = 0, n = 0, pn = 0, yds = 0, ydn = 0;
-    for (let i = a; i < b; i++) {
-      const h = c.holes[i];
-      parAll += h.par;
-      if (h.yds) { yds += h.yds; ydn++; }
-      if (r.s[i] != null) { tot += r.s[i]; par += h.par; n++; }
-      if (r.p[i] != null) { putts += r.p[i]; pn++; }
-    }
-    return { tot, par, parAll, putts, n, pn, yds, ydAll: ydn === b - a, rel: tot - par };
-  }
-  function label(s, par) {
-    if (s == null) return '';
-    if (s === 1) return 'Hole in one';
-    const d = s - par;
-    return d <= -3 ? 'Albatross' : d === -2 ? 'Eagle' : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey' : d === 2 ? 'Double bogey' : fmtRel(d);
-  }
-  function cls(s, par) {
-    if (s == null) return '';
-    const d = s - par;
-    return d <= -2 ? 'm-eagle' : d === -1 ? 'm-birdie' : d === 0 ? '' : d === 1 ? 'm-bogey' : 'm-double';
-  }
-  const mk = (s, par) => s == null ? '' : '<span class="mk ' + cls(s, par) + '">' + s + '</span>';
-
-  function stepScore(d) {
-    const r = S.round, i = r.hole, par = course().holes[i].par;
-    let v = r.s[i];
-    v = v == null ? par : Math.max(1, Math.min(15, v + d));
-    r.s[i] = v;
-    if (r.p[i] != null && r.p[i] > v) r.p[i] = v;
-    save(); render();
-  }
-  function stepPutts(d) {
-    const r = S.round, i = r.hole, max = r.s[i] != null ? r.s[i] : 9;
-    let v = r.p[i];
-    v = v == null ? Math.min(2, max) : Math.max(0, Math.min(max, v + d));
-    r.p[i] = v;
-    save(); render();
-  }
-  function go(n) {
-    S.round.hole = Math.max(0, Math.min(17, n));
-    ui.shot = null;
-    save(); render();
-  }
-
-  /* ---------- views ---------- */
-  const ICONS = {
-    hole: '<path d="M7 21V3"/><path d="M7 4l11 4-11 4"/><path d="M4 21h8"/>',
-    card: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
-    round: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'
-  };
-  function renderTabs() {
-    $('#tabs').innerHTML = [['hole', 'Hole'], ['card', 'Card'], ['round', 'Round']].map(t =>
-      '<button data-a="tab" data-t="' + t[0] + '"' + (ui.tab === t[0] ? ' aria-current="page"' : '') + '>' +
-      '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[t[0]] + '</svg>' + t[1] + '</button>').join('');
-  }
-  function renderHeader() {
-    $('#top').innerHTML =
-      '<div class="meta"><div class="course">' + esc(course().name) + '</div><div class="date">' + fmtDate(S.round.date) + '</div></div>' +
-      '<div class="pill ' + gps.status + '" id="gpsPill"><span class="dot"></span><span class="t">' + pillText() + '</span></div>';
-  }
-
-  function renderHole() {
-    const r = S.round, c = course(), i = r.hole, h = c.holes[i];
-    const s = r.s[i], p = r.p[i], t = sum(r, c, 0, 18);
-    const o = holeDists(i);
-    const chips = c.holes.map((_, k) =>
-      '<button class="chip' + (k === i ? ' on' : '') + (r.s[k] != null ? ' done' : '') + '" data-a="goto" data-i="' + k + '" aria-label="Hole ' + (k + 1) + (r.s[k] != null ? ', scored ' + r.s[k] : '') + '"' + (k === i ? ' aria-current="true"' : '') + '>' + (k + 1) + '</button>').join('');
-    const mkBtn = (k, l) => '<button class="btn small' + (h[k] ? ' marked' : '') + '" data-a="mark" data-k="' + k + '" aria-label="Mark ' + l.toLowerCase() + ' of the green at my position">' + l + (h[k] ? ' ✓' : '') + '</button>';
-    const relLine = (s == null ? 'Tap + to enter your score. The first tap sets par.' : label(s, h.par)) + (t.n ? ' · Round ' + fmtRel(t.rel) + ' through ' + t.n : '');
-    return '' +
-      '<section class="holehead">' +
-        '<button class="nav" data-a="prev" aria-label="Previous hole"' + (i === 0 ? ' disabled' : '') + '>‹</button>' +
-        '<div class="holeid"><span class="lbl">Hole</span><span class="num">' + (i + 1) + '</span><span class="meta">Par ' + h.par + (h.yds ? ' · ' + h.yds + ' yd' : '') + '</span></div>' +
-        '<button class="nav" data-a="next" aria-label="Next hole"' + (i === 17 ? ' disabled' : '') + '>›</button>' +
-      '</section>' +
-      '<div class="strip" id="strip">' + chips + '</div>' +
-      '<section class="card">' +
-        '<div class="dists">' +
-          '<div class="d"><span class="lbl">Front</span><span class="v" id="d-f">' + fmtD(o.f) + '</span></div>' +
-          '<div class="d main"><span class="lbl">Center</span><span class="v" id="d-c">' + fmtD(o.c) + '</span><span class="u">YARDS</span></div>' +
-          '<div class="d"><span class="lbl">Back</span><span class="v" id="d-b">' + fmtD(o.b) + '</span></div>' +
-        '</div>' +
-        '<p class="gstat" id="gstat">' + esc(statText(o)) + '</p>' +
-        '<button class="btn small gretry" id="gpsRetry" data-a="gps"' + (gps.status === 'blocked' ? '' : ' hidden') + '>Allow location</button>' +
-        '<div class="markrow"><span class="lbl">Stand on the green, then mark</span>' + mkBtn('f', 'Front') + mkBtn('c', 'Center') + mkBtn('b', 'Back') + '</div>' +
-      '</section>' +
-      '<section class="card shotrow">' +
-        '<div><span class="lbl">Shot distance</span><div class="sv"><span id="shotd">' + (ui.shot && gps.pos ? fmtD(Math.round(dist(ui.shot, gps.pos))) : '–') + '</span><span class="u">YD</span></div>' +
-        '<p class="small">Mark where the ball sits, hit, then walk to it.</p></div>' +
-        '<div class="col"><button class="btn" data-a="shot">' + (ui.shot ? 'Re-mark' : 'Mark shot') + '</button>' + (ui.shot ? '<button class="btn ghost" data-a="shotclear">Clear</button>' : '') + '</div>' +
-      '</section>' +
-      '<section class="card score">' +
-        '<div class="step"><span class="lbl">Score</span><button class="stepbtn" data-a="s-" aria-label="One less stroke">−</button><output class="val" aria-live="polite">' + (s == null ? '–' : mk(s, h.par)) + '</output><button class="stepbtn" data-a="s+" aria-label="One more stroke">+</button></div>' +
-        '<div class="step"><span class="lbl">Putts</span><button class="stepbtn" data-a="p-" aria-label="One less putt">−</button><output class="val" aria-live="polite">' + (p == null ? '–' : p) + '</output><button class="stepbtn" data-a="p+" aria-label="One more putt">+</button></div>' +
-        '<p class="rel">' + esc(relLine) + '</p>' +
-      '</section>' +
-      '<button class="btn primary" data-a="advance">' + (i < 17 ? 'Next hole' : 'See scorecard') + '</button>';
-  }
-
-  function renderCard() {
-    const r = S.round, c = course(), t = sum(r, c, 0, 18), cur = r.hole;
-    const row = i => {
-      const h = c.holes[i];
-      return '<tr' + (i === cur ? ' class="cur"' : '') + '><td class="hn"><button class="linkbtn" data-a="goto" data-i="' + i + '" aria-label="Go to hole ' + (i + 1) + '">' + (i + 1) + '</button></td>' +
-        '<td>' + h.par + '</td><td>' + (h.yds || '') + '</td><td class="sc">' + mk(r.s[i], h.par) + '</td><td>' + (r.p[i] != null ? r.p[i] : '') + '</td></tr>';
-    };
-    const subRow = (name, a, b) => {
-      const g = sum(r, c, a, b);
-      return '<tr class="sub"><td>' + name + '</td><td>' + g.parAll + '</td><td>' + (g.ydAll ? g.yds : '') + '</td><td class="sc">' + (g.n ? g.tot : '') + '</td><td>' + (g.pn ? g.putts : '') + '</td></tr>';
-    };
-    let body = '';
-    for (let i = 0; i < 9; i++) body += row(i);
-    body += subRow('Out', 0, 9);
-    for (let i = 9; i < 18; i++) body += row(i);
-    body += subRow('In', 9, 18) + subRow('Tot', 0, 18);
-    return '' +
-      '<section class="card"><div class="summary">' +
-        '<div><span class="lbl">Score</span><div class="n">' + (t.n ? t.tot : '–') + '</div></div>' +
-        '<div><span class="lbl">To par</span><div class="n">' + (t.n ? fmtRel(t.rel) : '–') + '</div></div>' +
-        '<div><span class="lbl">Holes</span><div class="n">' + t.n + '</div></div>' +
-        '<div><span class="lbl">Putts</span><div class="n">' + (t.pn ? t.putts : '–') + '</div></div>' +
-      '</div></section>' +
-      '<section class="card"><div class="scroll"><table><thead><tr><th>Hole</th><th>Par</th><th>Yds</th><th>Score</th><th>Putts</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
-      '<p class="small" style="margin-top:10px">Circle is a birdie, double circle an eagle, square a bogey, double square a double bogey or worse.</p></section>';
-  }
-
-  function renderRound() {
-    const r = S.round, c = course();
-    const locked = r.s.some(v => v != null);
-    const t = sum(r, c, 0, 18);
-    const opts = S.courses.map(k => '<option value="' + k.id + '"' + (k.id === r.cid ? ' selected' : '') + '>' + esc(k.name) + '</option>').join('');
-    const holes = c.holes.map((h, i) => {
-      const chip = (k, l, name) => '<button class="mchip' + (h[k] ? ' on' : '') + '" data-a="clearmark" data-i="' + i + '" data-k="' + k + '"' + (h[k] ? ' aria-label="Clear ' + name + ' mark for hole ' + (i + 1) + '"' : ' disabled aria-label="' + name + ' not marked for hole ' + (i + 1) + '"') + '>' + l + '</button>';
-      return '<div class="hrow"><span class="hn">' + (i + 1) + '</span>' +
-        '<select data-f="par" data-i="' + i + '" aria-label="Par for hole ' + (i + 1) + '">' + [3, 4, 5, 6].map(v => '<option value="' + v + '"' + (h.par === v ? ' selected' : '') + '>Par ' + v + '</option>').join('') + '</select>' +
-        '<input type="number" inputmode="numeric" min="0" max="800" placeholder="Yards" data-f="yds" data-i="' + i + '" value="' + (h.yds || '') + '" aria-label="Tee yardage for hole ' + (i + 1) + '">' +
-        '<div class="marks">' + chip('f', 'F', 'Front') + chip('c', 'C', 'Center') + chip('b', 'B', 'Back') + '</div></div>';
-    }).join('');
-    const hist = S.history.length ? S.history.map(h => {
-      const key = 'delhist:' + h.id;
-      return '<div class="hist"><div><div class="t">' + esc(h.course) + '</div><div class="small">' + fmtDate(h.date) + (h.n < 18 ? ' · ' + h.n + ' holes' : '') + (h.pn ? ' · ' + h.putts + ' putts' : '') + '</div></div>' +
-        '<div class="s">' + h.total + ' <span class="small">' + fmtRel(h.total - h.par) + '</span></div>' +
-        '<div class="r"><span></span><button class="btn small ghost' + (ui.armed === key ? ' danger' : '') + '" data-a="delhist" data-id="' + h.id + '">' + (ui.armed === key ? 'Tap again to remove' : 'Remove') + '</button></div></div>';
-    }).join('') : '<p class="small">Finished rounds show up here.</p>';
-    return '' +
-      '<section class="card"><h2>This round</h2>' +
-        '<div class="field"><label class="lbl" for="courseSel">Course</label><select id="courseSel" data-f="course"' + (locked ? ' disabled' : '') + '>' + opts + '</select></div>' +
-        '<div class="field"><label class="lbl" for="courseName">Course name</label><input id="courseName" data-f="cname" value="' + esc(c.name) + '" maxlength="60" autocomplete="off"></div>' +
-        (locked ? '<p class="small" style="margin-bottom:12px">Scores are entered, so the course is locked until you finish or reset this round.</p>' : '') +
-        '<div class="row"><button class="btn primary" data-a="finish"' + (t.n ? '' : ' disabled') + '>Finish and save round</button>' +
-        '<button class="btn' + (ui.armed === 'reset' ? ' danger' : '') + '" data-a="reset"' + (t.n ? '' : ' disabled') + '>' + (ui.armed === 'reset' ? 'Tap again to clear scores' : 'Reset scores') + '</button>' +
-        '<button class="btn" data-a="newcourse">Add a course</button></div>' +
-      '</section>' +
-      '<section class="card"><h2>Holes and greens</h2><p class="small" style="margin-bottom:8px">Set par and tee yardage from the course card. The F, C and B chips show which green points you have marked. Tap a lit chip to clear it.</p>' + holes + '</section>' +
-      '<section class="card"><h2>Past rounds</h2>' + hist + '</section>' +
-      '<p class="small" id="syncNote" style="text-align:center"></p>';
-  }
-
-  function render() {
-    const f = document.activeElement;
-    const keep = f && f.dataset && f.dataset.a ? { a: f.dataset.a, k: f.dataset.k, i: f.dataset.i, t: f.dataset.t } : null;
-    renderHeader(); renderTabs();
-    $('#view').innerHTML = ui.tab === 'hole' ? renderHole() : ui.tab === 'card' ? renderCard() : renderRound();
-    if (ui.tab === 'hole') { const on = $('.chip.on'); if (on && on.scrollIntoView) { try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} } updateLive(); }
-    if (ui.tab === 'round') setSync();
-    if (keep) {
-      let sel = '[data-a="' + keep.a + '"]';
-      if (keep.k) sel += '[data-k="' + keep.k + '"]';
-      if (keep.i != null && keep.a !== 'goto') sel += '[data-i="' + keep.i + '"]';
-      if (keep.t) sel += '[data-t="' + keep.t + '"]';
-      const n = $(sel); if (n && !n.disabled) { try { n.focus({ preventScroll: true }); } catch (e) {} }
-    }
-  }
-
-  /* ---------- actions ---------- */
-  let toastTimer = 0;
-  function toast(msg) {
-    const el = $('#toast'); el.textContent = msg; el.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
-  }
-  function arm(key) {
-    if (ui.armed === key) { ui.armed = null; return true; }
-    ui.armed = key; render(); return false;
-  }
-  function markGreen(k) {
-    if (!gps.pos) { toast(gps.status === 'blocked' ? 'Location is blocked, so there is nothing to mark.' : 'No GPS fix yet. Try again in a few seconds.'); return; }
-    const h = course().holes[S.round.hole];
-    h[k] = { lat: Math.round(gps.pos.lat * 1e6) / 1e6, lng: Math.round(gps.pos.lng * 1e6) / 1e6 };
-    save(); render();
-    const warn = gps.acc != null && gps.acc * YD > 25;
-    toast((k === 'f' ? 'Front' : k === 'c' ? 'Center' : 'Back') + ' marked' + (warn ? '. Weak fix, mark again if you can.' : ''));
-  }
-  function finishRound() {
-    const r = S.round, c = course(), t = sum(r, c, 0, 18);
-    if (!t.n) { toast('Enter at least one score first.'); return; }
-    S.history.unshift({ id: r.id, date: r.date, course: c.name, total: t.tot, par: t.par, n: t.n, putts: t.putts, pn: t.pn });
-    S.history = S.history.slice(0, 200);
-    S.round = mkRound(c.id); ui.tab = 'hole'; ui.shot = null;
-    save(); render(); toast('Round saved. Fresh card ready.');
-  }
-
-  function act(a, el) {
-    if (a !== 'reset' && a !== 'delhist') ui.armed = null;
-    switch (a) {
-      case 'tab': ui.tab = el.dataset.t; render(); $('#view').scrollTop = 0; break;
-      case 'prev': go(S.round.hole - 1); break;
-      case 'next': go(S.round.hole + 1); break;
-      case 'goto': S.round.hole = +el.dataset.i; ui.tab = 'hole'; ui.shot = null; save(); render(); $('#view').scrollTop = 0; break;
-      case 'advance': if (S.round.hole < 17) go(S.round.hole + 1); else { ui.tab = 'card'; render(); $('#view').scrollTop = 0; } break;
-      case 'mark': markGreen(el.dataset.k); break;
-      case 'clearmark': course().holes[+el.dataset.i][el.dataset.k] = null; save(); render(); break;
-      case 'shot':
-        if (!gps.pos) { toast(gps.status === 'blocked' ? 'Location is blocked.' : 'No GPS fix yet.'); break; }
-        ui.shot = { lat: gps.pos.lat, lng: gps.pos.lng }; render(); toast('Shot marked. Walk to your ball.'); break;
-      case 'shotclear': ui.shot = null; render(); break;
-      case 's+': stepScore(1); break;
-      case 's-': stepScore(-1); break;
-      case 'p+': stepPutts(1); break;
-      case 'p-': stepPutts(-1); break;
-      case 'gps': startGps(); break;
-      case 'finish': finishRound(); break;
-      case 'reset':
-        if (arm('reset')) { S.round.s = Array(18).fill(null); S.round.p = Array(18).fill(null); S.round.hole = 0; S.round.date = today(); ui.shot = null; save(); render(); toast('Scores cleared.'); }
-        break;
-      case 'delhist':
-        if (arm('delhist:' + el.dataset.id)) { S.history = S.history.filter(h => h.id !== el.dataset.id); save(); render(); }
-        break;
-      case 'newcourse': {
-        const nc = mkCourse('Course ' + (S.courses.length + 1));
-        S.courses.push(nc);
-        if (!S.round.s.some(v => v != null)) S.round.cid = nc.id;
-        save(); render(); toast('Course added. Set pars and yardages below.'); break;
-      }
-    }
-  }
-
-  document.addEventListener('click', e => {
-    const b = e.target.closest ? e.target.closest('[data-a]') : null;
-    if (!b || b.disabled) return;
-    act(b.dataset.a, b);
-  });
-  document.addEventListener('change', e => {
-    const el = e.target, f = el.dataset && el.dataset.f;
-    if (!f) return;
-    const c = course();
-    if (f === 'course') { if (!S.round.s.some(v => v != null)) { S.round.cid = el.value; S.round.hole = 0; save(); render(); } }
-    else if (f === 'cname') { c.name = el.value.trim() || 'Untitled course'; save(); renderHeader(); }
-    else if (f === 'par') { c.holes[+el.dataset.i].par = +el.value; save(); render(); }
-    else if (f === 'yds') { const v = parseInt(el.value, 10); c.holes[+el.dataset.i].yds = v > 0 ? Math.min(v, 800) : null; save(); }
-  });
-
-  /* keep the screen on while on the course */
-  let wl = null;
-  async function keepAwake() {
-    try {
-      if ('wakeLock' in navigator && !wl) {
-        wl = await navigator.wakeLock.request('screen');
-        wl.addEventListener('release', () => { wl = null; });
-      }
-    } catch (e) {}
-  }
-  document.addEventListener('click', keepAwake, { once: true });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
-
-  render();
-  startGps();
-  initRemote();
-})();
-</script>
-</body></html>
+const COURSE={name:"Odessa National Golf Club",lat:39.41536,lon:-75.63981};
+const pars=[4,5,4,4,5,3,4,4,3,4,5,4,4,4,3,5,3,4];
+const yardages=[410,632,453,300,526,142,430,380,190,375,568,367,377,470,226,480,167,468];
+const defaultClubs=[["Driver",230,250],["3 Wood",215,230],["5 Wood",200,215],["3 Hybrid",185,200],["4 Hybrid",175,188],["5 Iron",165,175],["6 Iron",155,165],["7 Iron",145,155],["8 Iron",135,145],["9 Iron",123,132],["Pitching Wedge",110,118],["Gap Wedge",95,102],["Sand Wedge",80,88],["Lob Wedge",65,72]];
+let state=JSON.parse(localStorage.getItem("pinhighpro")||"{}");
+state.clubs ||= defaultClubs.map(c=>({name:c[0],carry:c[1],total:c[2]}));state.hole ||=1;state.shots ||= [];state.holes ||= {};state.points ||= {};
+let currentPos=null, shotStart=null, placing=false, placingEnd=false, tempMarker=null;
+function persist(){localStorage.setItem("pinhighpro",JSON.stringify(state));}
+function holeData(){state.holes[state.hole] ||= {score:pars[state.hole-1],putts:2,fir:"—",gir:"—"};return state.holes[state.hole]}
+function holeKey(){return String(state.hole)}
+function ptKey(){state.points[holeKey()] ||= {};return state.points[holeKey()]}
+function yards(a,b){if(!a||!b)return null;const R=6371000,rad=x=>x*Math.PI/180,dLat=rad(b.lat-a.lat),dLon=rad(b.lon-a.lon),v=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;return Math.round(2*R*Math.asin(Math.sqrt(v))*1.0936133)}
+const map=L.map('map').setView([COURSE.lat,COURSE.lon],16);
+const satLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri'}).addTo(map);
+const roadLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'});
+let userMarker=null,markers=[];
+function clearMarkers(){markers.forEach(m=>map.removeLayer(m));markers=[]}
+function drawPoints(){clearMarkers();Object.entries(ptKey()).forEach(([type,p])=>{const m=L.marker([p.lat,p.lon]).addTo(map).bindPopup(typeLabel(type));markers.push(m)});if(currentPos){userMarker=L.circleMarker([currentPos.lat,currentPos.lon],{radius:8,color:'#fff',fillColor:'#20a7ff',fillOpacity:1}).addTo(map).bindPopup('Your location');markers.push(userMarker)}renderPointDistances();renderGPS()}
+function typeLabel(t){return ({greenFront:"Green front",greenCenter:"Green center",greenBack:"Green back",bunker:"Bunker",water:"Water hazard",layup:"Layup target",tee:"Tee box"})[t]||t}
+function renderGPS(){document.getElementById('gpsStatus').textContent=currentPos?'On':'Off';document.getElementById('gpsAccuracy').textContent=currentPos?'GPS fix acquired':'Tap locate';const p=ptKey();document.getElementById('centerDist').textContent=currentPos&&p.greenCenter?yards(currentPos,p.greenCenter):'—';document.getElementById('fbDist').textContent=currentPos&&p.greenFront&&p.greenBack?yards(currentPos,p.greenFront)+' / '+yards(currentPos,p.greenBack):'— / —';}
+function renderPointDistances(){const p=ptKey(),box=document.getElementById('pointDistances');box.innerHTML='';Object.entries(p).forEach(([t,v])=>{const d=currentPos?yards(currentPos,v):null;const el=document.createElement('div');el.className='shot';el.innerHTML='<span>'+typeLabel(t)+'<div class="small muted">'+v.lat.toFixed(5)+', '+v.lon.toFixed(5)+'</div></span><b>'+(d===null?'—':d+' yd')+'</b>';box.appendChild(el)})}
+function renderHole(){document.getElementById('holeTitle').textContent='Hole '+state.hole;document.getElementById('holeMeta').textContent='Par '+pars[state.hole-1]+' · Listed tee yardage '+yardages[state.hole-1]+' yd';document.getElementById('holeScore').textContent=holeData().score??'—';document.getElementById('lastShot').textContent=state.shots.filter(s=>s.hole===state.hole).slice(-1).map(s=>s.club+' · '+s.result+(s.distance?' · '+s.distance+' yd':'' )).join('')||'No shot recorded this hole.';drawPoints()}
+map.on('click',e=>{if(placing){ptKey()[document.getElementById('pointType').value]={lat:e.latlng.lat,lon:e.latlng.lng};placing=false;persist();drawPoints();return}if(placingEnd){finishShot({lat:e.latlng.lat,lon:e.latlng.lng});placingEnd=false;return}if(tempMarker)map.removeLayer(tempMarker);tempMarker=L.marker(e.latlng).addTo(map).bindPopup('Selected point').openPopup();});
+function locate(){if(!navigator.geolocation){alert('This browser does not support GPS.');return}navigator.geolocation.getCurrentPosition(pos=>{currentPos={lat:pos.coords.latitude,lon:pos.coords.longitude};map.setView([currentPos.lat,currentPos.lon],18);drawPoints()},err=>alert('Could not get GPS: '+err.message+'. Allow location access in your browser settings.'),{enableHighAccuracy:true,timeout:15000,maximumAge:5000})}
+function finishShot(end){const s=state.shots[state.shots.length-1];if(!s||s.hole!==state.hole){alert('Record a shot first.');return}if(!s.start){s.start=end;alert('Starting point saved. Mark the ending point after the shot.');return}s.end=end;s.distance=yards(s.start,s.end);persist();renderHole();renderStats()}
+function recordShot(){const club=document.getElementById('usedClub').value;const s={id:Date.now(),hole:state.hole,club,result:document.getElementById('shotResult').value,notes:document.getElementById('shotNotes').value,time:new Date().toISOString(),start:shotStart||currentPos||null,end:null,distance:null};state.shots.push(s);shotStart=null;persist();renderHole();renderStats();alert('Shot recorded. To measure it, use “Mark shot ended here” after walking to the ball. GPS distance is straight-line distance, not ball-flight tracking.')}
+function renderClubs(){const rows=document.getElementById('clubRows');rows.innerHTML='';state.clubs.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML='<td style="text-align:left"><input data-i="'+i+'" data-k="name" value="'+c.name.replace(/"/g,'&quot;')+'"></td><td><input type="number" data-i="'+i+'" data-k="carry" value="'+c.carry+'"></td><td><input type="number" data-i="'+i+'" data-k="total" value="'+c.total+'"></td>';rows.appendChild(tr)});const sel=document.getElementById('usedClub');sel.innerHTML=state.clubs.map(c=>'<option>'+c.name+'</option>').join('')}
+document.getElementById('clubRows').addEventListener('input',e=>{const i=e.target.dataset.i,k=e.target.dataset.k;if(i===undefined)return;state.clubs[i][k]=k==='name'?e.target.value:Number(e.target.value);document.getElementById('usedClub').innerHTML=state.clubs.map(c=>'<option>'+c.name+'</option>').join('');persist()});
+function recommend(){const d=Number(document.getElementById('targetDist').value);if(!d){alert('Enter the distance to your target.');return}const club=state.clubs.filter(c=>c.carry>0).sort((a,b)=>Math.abs(a.carry-d)-Math.abs(b.carry-d))[0];if(!club)return;document.getElementById('recommend').innerHTML='<span class="pill">Suggested club</span><h2 style="margin-top:8px;color:var(--green)">'+club.name+'</h2><p>Carry '+club.carry+' yd · Target '+d+' yd · Difference '+Math.abs(club.carry-d)+' yd</p><p class="small muted">Use your own carry numbers and adjust for wind, elevation, lie, temperature, hazards and desired landing area. This is a distance match, not a guaranteed optimal shot.</p>';document.getElementById('usedClub').value=club.name}
+function renderScore(){const body=document.getElementById('scoreRows');body.innerHTML='';for(let i=1;i<=18;i++){state.holes[i] ||= {score:pars[i-1],putts:2,fir:"—",gir:"—"};const h=state.holes[i],tr=document.createElement('tr');tr.innerHTML='<td>'+i+'</td><td>'+pars[i-1]+'</td><td><input type="number" min="1" max="20" style="width:62px" data-hole="'+i+'" data-k="score" value="'+(h.score??'')+'"></td><td><input type="number" min="0" max="10" style="width:55px" data-hole="'+i+'" data-k="putts" value="'+(h.putts??'')+'"></td><td><select data-hole="'+i+'" data-k="fir"><option '+(h.fir==='—'?'selected':'')+'>—</option><option '+(h.fir==='Hit'?'selected':'')+'>Hit</option><option '+(h.fir==='Left'?'selected':'')+'>Left</option><option '+(h.fir==='Right'?'selected':'')+'>Right</option></select></td><td><select data-hole="'+i+'" data-k="gir"><option '+(h.gir==='—'?'selected':'')+'>—</option><option '+(h.gir==='Hit'?'selected':'')+'>Hit</option><option '+(h.gir==='Left'?'selected':'')+'>Left</option><option '+(h.gir==='Right'?'selected':'')+'>Right</option><option '+(h.gir==='Short'?'selected':'')+'>Short</option><option '+(h.gir==='Long'?'selected':'')+'>Long</option></select></td>';body.appendChild(tr)}body.onchange=e=>{const t=e.target;if(!t.dataset.hole)return;const h=Number(t.dataset.hole),k=t.dataset.k;holeDataFor(h)[k]=['score','putts'].includes(k)?Number(t.value):t.value;persist();renderStats()};body.oninput=e=>{const t=e.target;if(!t.dataset.hole)return;const h=Number(t.dataset.hole),k=t.dataset.k;if(['score','putts'].includes(k)){holeDataFor(h)[k]=Number(t.value);persist();renderStats()}};const vals=Object.values(state.holes);document.getElementById('scoreTotals').innerHTML='<tr><th>Total</th><th>'+pars.reduce((a,b)=>a+b,0)+'</th><th>'+vals.reduce((a,h)=>a+(Number(h.score)||0),0)+'</th><th>'+vals.reduce((a,h)=>a+(Number(h.putts)||0),0)+'</th><th></th><th></th></tr>'}
+function holeDataFor(h){state.holes[h] ||= {score:pars[h-1],putts:2,fir:"—",gir:"—"};return state.holes[h]}
+function renderStats(){document.getElementById('statShots').textContent=state.shots.length;const measured=state.shots.filter(s=>s.distance>0);document.getElementById('statAvg').textContent=measured.length?Math.round(measured.reduce((a,s)=>a+s.distance,0)/measured.length)+' yd':'—';const played=Object.values(state.holes).filter(h=>h.fir&&h.fir!=='—');document.getElementById('statFir').textContent=played.length?Math.round(100*played.filter(h=>h.fir==='Hit').length/played.length)+'%':'—';const gir=Object.values(state.holes).filter(h=>h.gir&&h.gir!=='—');document.getElementById('statGir').textContent=gir.length?Math.round(100*gir.filter(h=>h.gir==='Hit').length/gir.length)+'%':'—';const cs=document.getElementById('clubStats');cs.innerHTML='';state.clubs.forEach(c=>{const arr=measured.filter(s=>s.club===c.name);if(arr.length){const avg=Math.round(arr.reduce((a,s)=>a+s.distance,0)/arr.length);cs.innerHTML+='<div class="shot"><span>'+c.name+'<div class="small muted">'+arr.length+' measured shots</div></span><b>'+avg+' yd avg</b></div>'}});const all=document.getElementById('allShots');all.innerHTML='';state.shots.slice(-15).reverse().forEach(s=>{all.innerHTML+='<div class="shot"><span><b>'+s.club+'</b> · Hole '+s.hole+'<div class="small muted">'+s.result+' · '+(s.notes||'No notes')+'</div></span><b>'+(s.distance?s.distance+' yd':'—')+'</b></div>'})}
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>{x.classList.toggle('active',x===b);x.classList.toggle('secondary',x!==b)});['play','clubs','score','stats'].forEach(id=>document.getElementById(id).classList.toggle('hidden',id!==b.dataset.tab));if(b.dataset.tab==='play')setTimeout(()=>map.invalidateSize(),100);if(b.dataset.tab==='score')renderScore();if(b.dataset.tab==='stats')renderStats()});
+document.getElementById('locate').onclick=locate;document.getElementById('sat').onclick=()=>{if(map.hasLayer(roadLayer))map.removeLayer(roadLayer);satLayer.addTo(map)};document.getElementById('road').onclick=()=>{if(map.hasLayer(satLayer))map.removeLayer(satLayer);roadLayer.addTo(map)};
+document.getElementById('prev').onclick=()=>{state.hole=Math.max(1,state.hole-1);persist();renderHole()};document.getElementById('next').onclick=()=>{state.hole=Math.min(18,state.hole+1);persist();renderHole()};
+document.getElementById('armPoint').onclick=()=>{placing=true;placingEnd=false;alert('Tap the map where the selected point is located. Use satellite view and zoom in.');};
+document.getElementById('markBall').onclick=()=>{if(!currentPos){locate();alert('Allow GPS, then tap Mark ball here again.');return}shotStart={...currentPos};alert('Current GPS position captured as shot start. Select your club and Record shot.');};
+document.getElementById('markEnd').onclick=()=>{if(!currentPos){locate();alert('Allow GPS, then tap this again after GPS is acquired.');return}finishShot({...currentPos});};
+document.getElementById('chooseClub').onclick=recommend;document.getElementById('recordShot').onclick=recordShot;document.getElementById('saveClubs').onclick=()=>{persist();alert('Club bag saved on this device.');renderStats()};document.getElementById('saveRound').onclick=()=>{state.roundName=document.getElementById('roundName').value;state.tee=document.getElementById('tee').value;persist();alert('Round saved on this device.');};document.getElementById('export').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pinhigh-round-data.json';a.click();URL.revokeObjectURL(url)};
+document.getElementById('clearData').onclick=()=>{if(confirm('Delete all saved Pin-High data from this browser?')){localStorage.removeItem('pinhighpro');location.reload()}};
+renderClubs();renderScore();renderHole();renderStats();
+</script></body></html>
